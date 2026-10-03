@@ -1,0 +1,1 @@
+grant usage on schema public to authenticated;\ngrant select,insert,update,delete on public.trainer_profiles,public.clients,public.workouts,public.exercises,public.workout_exercises,public.payments to authenticated;

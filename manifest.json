@@ -1,9 +1,1 @@
-{
-  "name":"Trainer App 3.0",
-  "short_name":"Trainer",
-  "start_url":"./index.html",
-  "display":"standalone",
-  "background_color":"#f5f7fb",
-  "theme_color":"#111827",
-  "icons":[]
-}
+{"name":"Trainer App 4.0","short_name":"Trainer","start_url":"./","display":"standalone","theme_color":"#111827"}

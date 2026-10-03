@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111827"><link rel="manifest" href="manifest.json">
-<title>Trainer App 3.0</title>
+<title>Trainer App 4.0</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#f5f7fb;color:#172033;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}header{background:#111827;color:#fff;padding:17px 15px;position:sticky;top:0;z-index:5}header h1{margin:0;font-size:21px}header p{margin:3px 0 0;color:#cbd5e1;font-size:12px}
 nav{position:sticky;top:69px;z-index:4;background:#fff;border-bottom:1px solid #e5e7eb;display:flex;gap:6px;overflow:auto;padding:9px}nav button{border:0;border-radius:11px;padding:10px 12px;white-space:nowrap;font-weight:750;background:#eef0f4;color:#374151}nav button.active{background:#5b5bd6;color:#fff}
@@ -15,7 +15,16 @@ button{font:inherit;cursor:pointer}.primary{border:0;background:#5b5bd6;color:#f
 @media(max-width:700px){.grid{grid-template-columns:repeat(2,1fr)}.formgrid,.profile-head{grid-template-columns:1fr}.exgrid{grid-template-columns:1fr 1fr}.stat b{font-size:20px}}
 </style></head>
 <body>
-<header><h1>🏋️ Trainer App 3.0</h1><p>Клиенты · Программы · Расписание · Оплаты</p></header>
+<div id="auth" style="max-width:420px;margin:35px auto;padding:22px;background:white;border-radius:18px">
+<h2>🏋️ Trainer App 4.0</h2><p>Вход в облачный аккаунт</p>
+<input id="email" type="email" placeholder="Email" style="width:100%;padding:12px;margin:6px 0">
+<input id="password" type="password" placeholder="Пароль (от 6 символов)" style="width:100%;padding:12px;margin:6px 0">
+<button class="primary" onclick="login(false)">Войти</button>
+<button class="secondary" onclick="login(true)">Создать аккаунт</button>
+<p id="authMsg" class="muted"></p></div>
+<div id="mainApp" style="display:none">
+
+<header><h1>🏋️ Trainer App 4.0</h1><p>Клиенты · Программы · Расписание · Оплаты</p></header>
 <nav><button class="active" data-s="home">🏠 Сегодня</button><button data-s="clients">👥 Клиенты</button><button data-s="training">➕ Тренировка</button><button data-s="workouts">📋 Тренировки</button><button data-s="payments">💳 Оплаты</button></nav>
 <main>
 <section id="home" class="screen active"><h2>Сегодня</h2><div class="grid"><div class="stat"><b id="a">0</b><span>тренировок сегодня</span></div><div class="stat"><b id="b">0</b><span>клиентов</span></div><div class="stat"><b id="c">0</b><span>долгов</span></div><div class="stat"><b id="d">0 ₽</b><span>оплачено</span></div></div><div class="card"><div class="row"><b>Ближайшие тренировки</b><button class="secondary" onclick="screen('training')">+ Добавить</button></div><div id="upcoming"></div></div></section>
@@ -30,23 +39,40 @@ button{font:inherit;cursor:pointer}.primary{border:0;background:#5b5bd6;color:#f
 
 <section id="payments" class="screen"><h2>Оплаты</h2><div class="card"><div class="row wrap"><b>Общий долг: <span id="debt">0 ₽</span></b><input id="paysearch" placeholder="Поиск клиента..." oninput="renderPayments()" style="max-width:250px"></div></div><div class="tablewrap"><table class="paytable"><thead><tr><th>Клиент</th><th>Дата</th><th>Тренировка</th><th>Сумма</th><th>Статус</th><th></th></tr></thead><tbody id="pbody"></tbody></table></div></section>
 </main><div id="toast" class="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
 <script>
 const E={"Спина":["Кошка-корова","Bird Dog","Плавание Pilates","Swan","Повороты позвоночника","Тяга резинки"],"Ноги":["Приседания","Выпады","Ягодичный мост","Clam Shell","Side Leg Lift","Wall Sit"],"Ягодицы":["Ягодичный мост","Мост на одной ноге","Clam Shell","Donkey Kick","Fire Hydrant"],"Пресс":["Hundred","Dead Bug","Roll Up","Criss Cross","Plank","Toe Taps"],"Руки и плечи":["Круги руками","Отжимания от стены","Тяга резинки","Разведение рук","Triceps Kickback"],"Pilates":["Hundred","Roll Up","Single Leg Stretch","Double Leg Stretch","Spine Stretch Forward","Saw","Swan","Swimming"],"Растяжка":["Задняя поверхность бедра","Сгибатели бедра","Поза ребёнка","Растяжка ягодиц","Грудной отдел"],"Дыхание":["Диафрагмальное дыхание","Боковое дыхание Pilates","Релаксация"],"Кардио":["Marching","Step Touch","Jumping Jacks","Высокие колени"]};
-let clients=JSON.parse(localStorage.getItem("v3_clients")||"[]"), ws=JSON.parse(localStorage.getItem("v3_workouts")||"[]"), exs=[], currentProfile=null;
+let clients=[],ws=[],exs=[],currentProfile=null,db=null,user=null;
 const $=x=>document.getElementById(x), id=()=>crypto.randomUUID?crypto.randomUUID():Date.now()+Math.random();
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
-function persist(){localStorage.setItem("v3_clients",JSON.stringify(clients));localStorage.setItem("v3_workouts",JSON.stringify(ws))}
+function persist(){} // Changes are saved directly to Supabase
+async function reload(){
+ const [a,b,c,d]=await Promise.all([
+ db.from("clients").select("*"),db.from("workouts").select("*"),
+ db.from("payments").select("*"),db.from("workout_exercises").select("*").order("sort_order")
+ ]);
+ const err=[a,b,c,d].find(x=>x.error);if(err){toast("Ошибка облака: "+err.error.message);return}
+ clients=a.data.map(x=>({id:x.id,name:x.name,phone:x.phone||"",goal:x.goal||"",note:x.subscription||"",personalNote:x.notes||""}));
+ const exmap={};d.data.forEach(x=>(exmap[x.workout_id]??=[]).push({name:x.exercise_name,sets:x.sets,reps:x.reps,time:x.duration,note:x.notes}));
+ ws=b.data.map(x=>({id:x.id,clientId:x.client_id,type:x.workout_type,date:x.workout_date,time:x.workout_time,duration:x.duration,price:Number(x.price),notes:x.notes,done:x.status==="completed",paid:c.data.some(p=>p.workout_id===x.id),exercises:exmap[x.id]||[]}));
+ renderAll();
+}
+async function query(p){let r=await p;if(r.error){toast("Ошибка: "+r.error.message);throw r.error}return r.data}
+
 function toast(t){let x=$("toast");x.textContent=t;x.style.display="block";clearTimeout(window.z);window.z=setTimeout(()=>x.style.display="none",2000)}
 function screen(s){document.querySelectorAll(".screen").forEach(x=>x.classList.remove("active"));$(s).classList.add("active");document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("active",x.dataset.s===s));renderAll()}
 document.querySelectorAll("nav button").forEach(x=>x.onclick=()=>screen(x.dataset.s));
 function client(id){return clients.find(x=>x.id===id)}
 function date(d){return d?new Date(d+"T00:00:00").toLocaleDateString("ru-RU"):""}
-function addClient(){let n=$("cn").value.trim();if(!n)return toast("Введите имя");clients.push({id:id(),name:n,phone:$("cp").value.trim(),goal:$("goal").value.trim(),note:$("cnote").value.trim(),personalNote:""});["cn","cp","goal","cnote"].forEach(x=>$(x).value="");persist();renderAll();toast("Клиент добавлен")}
+async function addClient(){let n=$("cn").value.trim();if(!n)return toast("Введите имя");
+try{await query(db.from("clients").insert({trainer_id:user.id,name:n,phone:$("cp").value.trim(),goal:$("goal").value.trim(),subscription:$("cnote").value.trim(),notes:""}));
+["cn","cp","goal","cnote"].forEach(x=>$(x).value="");await reload();toast("Клиент сохранён ☁️")}catch(e){}}
 function renderClients(){let q=($("search").value||"").toLowerCase(), arr=clients.filter(c=>(c.name+" "+c.phone+" "+c.goal).toLowerCase().includes(q));$("clist").innerHTML=arr.length?arr.map(c=>{let cw=ws.filter(w=>w.clientId===c.id), debt=cw.filter(w=>!w.paid).reduce((s,w)=>s+Number(w.price||0),0);return `<div class="client"><div class="row wrap"><div><h3>${esc(c.name)}</h3><div class="muted">${esc(c.phone||"Телефон не указан")} · ${esc(c.goal||"Цель не указана")}</div></div><div><span class="${debt?'bad':'ok'}">${debt?`Долг ${debt} ₽`:"Оплачено ✓"}</span></div></div><div class="muted" style="margin:8px 0">Тренировок: ${cw.length} · ${c.note?esc(c.note):"без абонемента"}</div><button class="primary" onclick="openProfile('${c.id}')">Открыть карточку клиента</button> <button class="danger" onclick="delClient('${c.id}')">Удалить</button></div>`}).join(""):`<div class="empty">Клиентов пока нет</div>`}
-function delClient(i){if(!confirm("Удалить клиента и его тренировки?"))return;clients=clients.filter(c=>c.id!==i);ws=ws.filter(w=>w.clientId!==i);persist();renderAll()}
+async function delClient(i){if(!confirm("Удалить клиента и его тренировки?"))return;try{await query(db.from("clients").delete().eq("id",i));await reload()}catch(e){}}
 function openProfile(i){currentProfile=i;screen("profile")}
 function renderProfile(){if(!currentProfile||!client(currentProfile))return;let c=client(currentProfile), cw=ws.filter(w=>w.clientId===c.id).sort((a,b)=>(b.date+" "+b.time).localeCompare(a.date+" "+a.time)), paid=cw.filter(w=>w.paid).reduce((s,w)=>s+Number(w.price||0),0), debt=cw.filter(w=>!w.paid).reduce((s,w)=>s+Number(w.price||0),0);$("pname").textContent=c.name;$("pinfo").textContent=(c.phone||"")+(c.goal?" · "+c.goal:"");$("pnotes").value=c.personalNote||"";$("metrics").innerHTML=`<div class="metric"><small>Тренировок</small><b>${cw.length}</b></div><div class="metric"><small>Оплачено</small><b>${paid} ₽</b></div><div class="metric"><small>Долг</small><b class="${debt?'bad':'ok'}">${debt} ₽</b></div><div class="metric"><small>Выполнено</small><b>${cw.filter(w=>w.done).length}</b></div>`;$("phistory").innerHTML=cw.length?cw.map(w=>`<div class="client"><div class="row"><div><b>${date(w.date)} · ${esc(w.time)}</b><br><span class="tag">${esc(w.type)}</span> ${w.exercises?.length||0} упражнений</div><div class="${w.paid?'ok':'bad'}">${w.paid?"Оплачено":"Не оплачено"}</div></div><div style="margin-top:7px">${(w.exercises||[]).map(e=>esc(e.name)).join(" · ")}</div><div class="row" style="margin-top:7px"><span class="muted">${w.price} ₽ ${w.done?"· выполнено":""}</span><button class="secondary" onclick="editW('${w.id}')">Изменить</button></div></div>`).join(""):`<div class="empty">Истории пока нет</div>`;$("ppayments").innerHTML=cw.length?cw.map(w=>`<div class="row" style="padding:8px 0;border-bottom:1px solid #eee"><span>${date(w.date)} · ${esc(w.type)}</span><b class="${w.paid?'ok':'bad'}">${w.price} ₽ · ${w.paid?"Оплачено":"Не оплачено"}</b></div>`).join(""):`<div class="empty">Оплат пока нет</div>`}
-function saveProfileNotes(){let c=client(currentProfile);if(c){c.personalNote=$("pnotes").value;persist();toast("Заметки сохранены")}}
+async function saveProfileNotes(){if(!currentProfile)return;try{await query(db.from("clients").update({notes:$("pnotes").value}).eq("id",currentProfile));await reload();toast("Сохранено ☁️")}catch(e){}}
 function newForProfile(){clearWorkout();$("wc").value=currentProfile;screen("training")}
 function fillClients(){let o=clients.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("");$("wc").innerHTML=o||'<option value="">Добавьте клиента</option>';$("wf").innerHTML='<option value="">Все клиенты</option>'+o}
 function fillCat(){ $("cat").innerHTML=Object.keys(E).map(x=>`<option>${x}</option>`).join("");fillEx()}
@@ -55,15 +81,42 @@ function addEx(){if(!$("ex").value)return;exs.push({name:$("ex").value,cat:$("ca
 function customEx(){let n=prompt("Название упражнения");if(n?.trim()){exs.push({name:n.trim(),cat:"Моё",sets:3,reps:"10",time:"",note:""});renderEx()}}
 function renderEx(){$("exlist").innerHTML=exs.map((e,i)=>`<div class="exercise"><div class="row"><b>${esc(e.name)}</b><button class="danger" onclick="exs.splice(${i},1);renderEx()">Удалить</button></div><div class="exgrid"><div><label>Подходы</label><input value="${esc(e.sets)}" onchange="exs[${i}].sets=this.value"></div><div><label>Повторения</label><input value="${esc(e.reps)}" onchange="exs[${i}].reps=this.value"></div><div><label>Время</label><input value="${esc(e.time)}" placeholder="30 сек" onchange="exs[${i}].time=this.value"></div></div><input style="margin-top:7px" value="${esc(e.note)}" placeholder="Заметка" onchange="exs[${i}].note=this.value"></div>`).join("")}
 function clearWorkout(){$("eid").value="";$("ttitle").textContent="Новая тренировка";$("wd").value=new Date().toISOString().slice(0,10);$("wtime").value="10:00";$("wdur").value=60;$("wprice").value=0;$("wn").value="";exs=[];renderEx()}
-function saveWorkout(){let cid=$("wc").value;if(!cid)return toast("Выберите клиента");let o={id:$("eid").value||id(),clientId:cid,type:$("wt").value,date:$("wd").value,time:$("wtime").value,duration:+$("wdur").value||60,price:+$("wprice").value||0,notes:$("wn").value,exercises:JSON.parse(JSON.stringify(exs)),paid:false,done:false},ix=ws.findIndex(w=>w.id===o.id);if(ix>=0){o.paid=ws[ix].paid;o.done=ws[ix].done;ws[ix]=o}else ws.push(o);persist();clearWorkout();toast("Сохранено");currentProfile=cid;screen("profile")}
+async function saveWorkout(){let cid=$("wc").value;if(!cid)return toast("Выберите клиента");
+let old=ws.find(x=>x.id===$("eid").value),row={trainer_id:user.id,client_id:cid,title:$("wt").value,workout_type:$("wt").value,workout_date:$("wd").value,workout_time:$("wtime").value,duration:+$("wdur").value||60,price:+$("wprice").value||0,notes:$("wn").value,status:old?.done?"completed":"planned"};
+try{
+let r=old?await query(db.from("workouts").update(row).eq("id",old.id).select().single()):await query(db.from("workouts").insert(row).select().single());
+if(old)await query(db.from("workout_exercises").delete().eq("workout_id",r.id));
+if(exs.length)await query(db.from("workout_exercises").insert(exs.map((e,i)=>({workout_id:r.id,exercise_name:e.name,sets:+e.sets||0,reps:+e.reps||0,duration:parseInt(e.time)||0,notes:e.note||"",sort_order:i}))));
+await reload();clearWorkout();currentProfile=cid;screen("profile");toast("Сохранено в облаке ☁️")
+}catch(e){}}
 function editW(i){let w=ws.find(x=>x.id===i);$("eid").value=w.id;$("ttitle").textContent="Редактировать тренировку";$("wc").value=w.clientId;$("wt").value=w.type;$("wd").value=w.date;$("wtime").value=w.time;$("wdur").value=w.duration;$("wprice").value=w.price;$("wn").value=w.notes||"";exs=JSON.parse(JSON.stringify(w.exercises||[]));renderEx();screen("training")}
-function togglePaid(i){let w=ws.find(x=>x.id===i);w.paid=!w.paid;persist();renderAll();toast(w.paid?"Оплата отмечена":"Оплата отменена")}
-function toggleDone(i){let w=ws.find(x=>x.id===i);w.done=!w.done;persist();renderAll()}
-function delW(i){if(confirm("Удалить тренировку?")){ws=ws.filter(w=>w.id!==i);persist();renderAll()}}
+async function togglePaid(i){let w=ws.find(x=>x.id===i);if(!w)return;
+try{if(w.paid)await query(db.from("payments").delete().eq("workout_id",i));
+else await query(db.from("payments").insert({trainer_id:user.id,client_id:w.clientId,workout_id:i,amount:w.price,payment_date:new Date().toISOString().slice(0,10),status:"paid"}));
+await reload();toast("Оплата обновлена ☁️")}catch(e){}}
+async function toggleDone(i){let w=ws.find(x=>x.id===i);try{await query(db.from("workouts").update({status:w.done?"planned":"completed"}).eq("id",i));await reload()}catch(e){}}
+async function delW(i){if(!confirm("Удалить тренировку?"))return;try{await query(db.from("workouts").delete().eq("id",i));await reload()}catch(e){}}
 function renderWorkouts(){let f=$("wf").value,a=ws.filter(w=>!f||w.clientId===f).sort((x,y)=>(y.date+y.time).localeCompare(x.date+x.time));$("wlist").innerHTML=a.length?a.map(w=>`<div class="card"><div class="row wrap"><div><b>${esc(client(w.clientId)?.name||"")}</b><div class="muted">${date(w.date)} · ${esc(w.time)} · ${esc(w.type)} · ${w.price} ₽</div></div><span class="${w.paid?'ok':'bad'}">${w.paid?"✓ Оплачено":"Не оплачено"}</span></div><div style="margin-top:8px">${(w.exercises||[]).map(e=>`<span class="tag">${esc(e.name)}</span> `).join("")}</div><div class="row wrap" style="margin-top:10px"><button class="secondary" onclick="editW('${w.id}')">✏️ Изменить</button><button class="secondary" onclick="toggleDone('${w.id}')">${w.done?"↩":"✓ Выполнено"}</button><button class="secondary" onclick="togglePaid('${w.id}')">💳 ${w.paid?"Отменить":"Оплатить"}</button><button class="danger" onclick="delW('${w.id}')">Удалить</button></div></div>`).join(""):`<div class="empty">Тренировок нет</div>`}
 function renderPayments(){let q=($("paysearch").value||"").toLowerCase(),a=ws.filter(w=>(client(w.clientId)?.name||"").toLowerCase().includes(q)),debt=a.filter(w=>!w.paid).reduce((s,w)=>s+Number(w.price||0),0);$("debt").textContent=debt.toLocaleString("ru-RU")+" ₽";$("pbody").innerHTML=a.length?a.map(w=>`<tr><td><b>${esc(client(w.clientId)?.name||"")}</b></td><td>${date(w.date)}</td><td>${esc(w.type)}</td><td>${w.price} ₽</td><td class="${w.paid?'ok':'bad'}">${w.paid?"✓ Оплачено":"❌ Не оплачено"}</td><td><button class="secondary" onclick="togglePaid('${w.id}')">${w.paid?"Отменить":"Отметить"}</button></td></tr>`).join(""):`<tr><td colspan="6" class="empty">Нет данных</td></tr>`}
 function renderHome(){let t=new Date().toISOString().slice(0,10),un=ws.filter(w=>!w.paid);$("a").textContent=ws.filter(w=>w.date===t).length;$("b").textContent=clients.length;$("c").textContent=un.length;$("d").textContent=ws.filter(w=>w.paid).reduce((s,w)=>s+Number(w.price||0),0).toLocaleString("ru-RU")+" ₽";let a=ws.filter(w=>(w.date+w.time)>=t).sort((x,y)=>(x.date+x.time).localeCompare(y.date+y.time)).slice(0,7);$("upcoming").innerHTML=a.map(w=>`<div class="client"><div class="row"><span><b>${date(w.date)} · ${esc(w.time)}</b><br>${esc(client(w.clientId)?.name||"")} · ${esc(w.type)}</span><span class="${w.paid?'ok':'bad'}">${w.paid?"Оплачено":"Не оплачено"}</span></div></div>`).join("")||'<div class="empty">Нет ближайших тренировок</div>'}
 function renderAll(){fillClients();renderClients();renderWorkouts();renderPayments();renderHome();renderProfile()}
-fillCat();clearWorkout();renderAll();
+fillCat();clearWorkout();
+async function enter(){document.getElementById("auth").style.display="none";document.getElementById("mainApp").style.display="";await reload()}
+async function login(signup=false){
+ const email=document.getElementById("email").value,password=document.getElementById("password").value;
+ const r=signup?await db.auth.signUp({email,password}):await db.auth.signInWithPassword({email,password});
+ if(r.error)return document.getElementById("authMsg").textContent=r.error.message;
+ if(r.data.session){user=r.data.user;await enter()}
+ else document.getElementById("authMsg").textContent="Подтвердите email по ссылке из письма, затем войдите.";
+}
+async function logout(){await db.auth.signOut();location.reload()}
+async function boot(){
+ const cfg=window.SUPABASE_CONFIG;
+ if(!cfg?.publishableKey||cfg.publishableKey.includes("PASTE_"))return document.getElementById("authMsg").textContent="Вставьте Publishable key в config.js";
+ db=supabase.createClient(cfg.url,cfg.publishableKey);
+ const r=await db.auth.getSession();
+ if(r.data.session){user=r.data.session.user;await enter()}
+}
+boot();
 if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
-</script></body></html>
+</script><button class="secondary" style="margin:15px" onclick="logout()">Выйти из аккаунта</button></div></body></html>
