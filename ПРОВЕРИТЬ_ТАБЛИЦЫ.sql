@@ -1,0 +1,1 @@
+SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('clients','workouts','payments','exercises','workout_exercises','trainer_profiles','studios','studio_members','studio_prices','studio_ledger','studio_subscriptions','studio_client_links') ORDER BY table_name;
