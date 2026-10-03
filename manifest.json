@@ -1,1 +1,24 @@
-{"name":"Trainer App 4.0","short_name":"Trainer","start_url":"./","display":"standalone","theme_color":"#111827"}
+{
+  "name": "Продвижение · Студия пилатеса",
+  "short_name": "Продвижение",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F8F5EE",
+  "theme_color": "#F8F5EE",
+  "description": "Расписание, клиенты, тренировки и оплаты",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
