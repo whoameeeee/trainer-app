@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111827"><link rel="manifest" href="manifest.json">
-<title>Trainer App 4.1</title>
+<title>Trainer App 4.2</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#f5f7fb;color:#172033;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}header{background:#111827;color:#fff;padding:17px 15px;position:sticky;top:0;z-index:5}header h1{margin:0;font-size:21px}header p{margin:3px 0 0;color:#cbd5e1;font-size:12px}
 nav{position:sticky;top:69px;z-index:4;background:#fff;border-bottom:1px solid #e5e7eb;display:flex;gap:6px;overflow:auto;padding:9px}nav button{border:0;border-radius:11px;padding:10px 12px;white-space:nowrap;font-weight:750;background:#eef0f4;color:#374151}nav button.active{background:#5b5bd6;color:#fff}
@@ -17,7 +17,7 @@ button{font:inherit;cursor:pointer}.primary{border:0;background:#5b5bd6;color:#f
 </style></head>
 <body>
 <div id="auth" class="auth-panel">
-<h2>🏋️ Trainer App 4.1</h2><p class="muted">Ваши данные надёжно хранятся в облаке</p>
+<h2>🏋️ Trainer App 4.2</h2><p class="muted">Ваши данные надёжно хранятся в облаке</p>
 <div id="normalAuth">
 <div class="auth-tabs"><button id="loginTab" class="primary" onclick="authMode('login')">Войти</button><button id="signupTab" class="secondary" onclick="authMode('signup')">Регистрация</button></div>
 <label for="email">Электронная почта</label><input id="email" type="email" autocomplete="email" placeholder="Например, name@mail.ru">
@@ -31,11 +31,15 @@ button{font:inherit;cursor:pointer}.primary{border:0;background:#5b5bd6;color:#f
 <p id="authMsg" class="auth-message" role="status" aria-live="polite"></p></div>
 <div id="mainApp" style="display:none">
 
-<header><h1>🏋️ Trainer App 4.1</h1><p>Клиенты · Программы · Расписание · Оплаты</p></header>
-<nav><button class="active" data-s="home">🏠 Сегодня</button><button data-s="clients">👥 Клиенты</button><button data-s="training">➕ Тренировка</button><button data-s="workouts">📋 Тренировки</button><button data-s="payments">💳 Оплаты</button></nav>
+<header><h1>🏋️ Trainer App 4.2</h1><p>Клиенты · Программы · Расписание · Оплаты</p></header>
+<nav><button class="active" data-s="home">🏠 Сегодня</button><button data-s="diary">📅 Ежедневник</button><button data-s="clients">👥 Клиенты</button><button data-s="training">➕ Тренировка</button><button data-s="workouts">📋 Тренировки</button><button data-s="payments">💳 Оплаты</button></nav>
 <main>
 <section id="home" class="screen active"><h2>Сегодня</h2><div class="grid"><div class="stat"><b id="a">0</b><span>тренировок сегодня</span></div><div class="stat"><b id="b">0</b><span>клиентов</span></div><div class="stat"><b id="c">0</b><span>долгов</span></div><div class="stat"><b id="d">0 ₽</b><span>оплачено</span></div></div><div class="card"><div class="row"><b>Ближайшие тренировки</b><button class="secondary" onclick="screen('training')">+ Добавить</button></div><div id="upcoming"></div></div></section>
 
+<section id="diary" class="screen"><h2>📅 Ежедневник</h2>
+<div class="card"><div class="row wrap" style="gap:8px"><button class="secondary" onclick="shiftDiary(-1)">← Предыдущий</button><input id="diaryDate" type="date" onchange="renderDiary()" style="max-width:185px"><button class="secondary" onclick="shiftDiary(1)">Следующий →</button><button class="secondary" onclick="setDiaryToday()">Сегодня</button><button class="primary" onclick="diaryNew()">＋ Записать клиента</button></div><p id="diarySummary" class="muted" style="margin:12px 0 0"></p></div>
+<div class="tablewrap"><table class="paytable" style="width:100%"><thead><tr><th>Время</th><th>Клиент</th><th>Тренировка</th><th>Статус</th><th>Действие</th></tr></thead><tbody id="diaryBody"></tbody></table></div>
+<p class="muted" style="margin-top:10px">Время окончания рассчитывается по длительности тренировки. Данные сохраняются в Supabase.</p></section>
 <section id="clients" class="screen"><h2>Клиенты</h2><div class="card"><div class="formgrid"><div><label>Имя</label><input id="cn" placeholder="Анна"></div><div><label>Телефон</label><input id="cp" placeholder="+7 ..."></div><div><label>Цель / направление</label><input id="goal" placeholder="Pilates, спина..."></div><div><label>Абонемент / заметка</label><input id="cnote" placeholder="Например: 8 занятий"></div></div><button class="primary" style="margin-top:10px" onclick="addClient()">Добавить клиента</button></div><input id="search" placeholder="🔎 Найти клиента..." oninput="renderClients()"><div id="clist"></div></section>
 
 <section id="profile" class="screen"><div class="row"><div><h2 id="pname">Клиент</h2><div id="pinfo" class="muted"></div></div><button class="secondary" onclick="screen('clients')">← Клиенты</button></div><div class="profile-head" id="metrics"></div><div class="card"><b>Личные заметки</b><textarea id="pnotes" onchange="saveProfileNotes()" placeholder="Цели, ограничения, предпочтения..."></textarea></div><div class="card"><div class="row"><b>История тренировок</b><button class="primary" onclick="newForProfile()">+ Тренировка</button></div><div id="phistory"></div></div><div class="card"><b>Оплаты клиента</b><div id="ppayments"></div></div></section>
@@ -87,7 +91,7 @@ function fillEx(){let a=E[$("cat").value]||[];$("ex").innerHTML=a.map(x=>`<optio
 function addEx(){if(!$("ex").value)return;exs.push({name:$("ex").value,cat:$("cat").value,sets:3,reps:"10",time:"",note:""});renderEx()}
 function customEx(){let n=prompt("Название упражнения");if(n?.trim()){exs.push({name:n.trim(),cat:"Моё",sets:3,reps:"10",time:"",note:""});renderEx()}}
 function renderEx(){$("exlist").innerHTML=exs.map((e,i)=>`<div class="exercise"><div class="row"><b>${esc(e.name)}</b><button class="danger" onclick="exs.splice(${i},1);renderEx()">Удалить</button></div><div class="exgrid"><div><label>Подходы</label><input value="${esc(e.sets)}" onchange="exs[${i}].sets=this.value"></div><div><label>Повторения</label><input value="${esc(e.reps)}" onchange="exs[${i}].reps=this.value"></div><div><label>Время</label><input value="${esc(e.time)}" placeholder="30 сек" onchange="exs[${i}].time=this.value"></div></div><input style="margin-top:7px" value="${esc(e.note)}" placeholder="Заметка" onchange="exs[${i}].note=this.value"></div>`).join("")}
-function clearWorkout(){$("eid").value="";$("ttitle").textContent="Новая тренировка";$("wd").value=new Date().toISOString().slice(0,10);$("wtime").value="10:00";$("wdur").value=60;$("wprice").value=0;$("wn").value="";exs=[];renderEx()}
+function clearWorkout(){$("eid").value="";$("ttitle").textContent="Новая тренировка";$("wd").value=diaryISO(new Date());$("wtime").value="10:00";$("wdur").value=60;$("wprice").value=0;$("wn").value="";exs=[];renderEx()}
 async function saveWorkout(){let cid=$("wc").value;if(!cid)return toast("Выберите клиента");
 let old=ws.find(x=>x.id===$("eid").value),row={trainer_id:user.id,client_id:cid,title:$("wt").value,workout_type:$("wt").value,workout_date:$("wd").value,workout_time:$("wtime").value,duration:+$("wdur").value||60,price:+$("wprice").value||0,notes:$("wn").value,status:old?.done?"completed":"planned"};
 try{
@@ -106,7 +110,13 @@ async function delW(i){if(!confirm("Удалить тренировку?"))retur
 function renderWorkouts(){let f=$("wf").value,a=ws.filter(w=>!f||w.clientId===f).sort((x,y)=>(y.date+y.time).localeCompare(x.date+x.time));$("wlist").innerHTML=a.length?a.map(w=>`<div class="card"><div class="row wrap"><div><b>${esc(client(w.clientId)?.name||"")}</b><div class="muted">${date(w.date)} · ${esc(w.time)} · ${esc(w.type)} · ${w.price} ₽</div></div><span class="${w.paid?'ok':'bad'}">${w.paid?"✓ Оплачено":"Не оплачено"}</span></div><div style="margin-top:8px">${(w.exercises||[]).map(e=>`<span class="tag">${esc(e.name)}</span> `).join("")}</div><div class="row wrap" style="margin-top:10px"><button class="secondary" onclick="editW('${w.id}')">✏️ Изменить</button><button class="secondary" onclick="toggleDone('${w.id}')">${w.done?"↩":"✓ Выполнено"}</button><button class="secondary" onclick="togglePaid('${w.id}')">💳 ${w.paid?"Отменить":"Оплатить"}</button><button class="danger" onclick="delW('${w.id}')">Удалить</button></div></div>`).join(""):`<div class="empty">Тренировок нет</div>`}
 function renderPayments(){let q=($("paysearch").value||"").toLowerCase(),a=ws.filter(w=>(client(w.clientId)?.name||"").toLowerCase().includes(q)),debt=a.filter(w=>!w.paid).reduce((s,w)=>s+Number(w.price||0),0);$("debt").textContent=debt.toLocaleString("ru-RU")+" ₽";$("pbody").innerHTML=a.length?a.map(w=>`<tr><td><b>${esc(client(w.clientId)?.name||"")}</b></td><td>${date(w.date)}</td><td>${esc(w.type)}</td><td>${w.price} ₽</td><td class="${w.paid?'ok':'bad'}">${w.paid?"✓ Оплачено":"❌ Не оплачено"}</td><td><button class="secondary" onclick="togglePaid('${w.id}')">${w.paid?"Отменить":"Отметить"}</button></td></tr>`).join(""):`<tr><td colspan="6" class="empty">Нет данных</td></tr>`}
 function renderHome(){let t=new Date().toISOString().slice(0,10),un=ws.filter(w=>!w.paid);$("a").textContent=ws.filter(w=>w.date===t).length;$("b").textContent=clients.length;$("c").textContent=un.length;$("d").textContent=ws.filter(w=>w.paid).reduce((s,w)=>s+Number(w.price||0),0).toLocaleString("ru-RU")+" ₽";let a=ws.filter(w=>(w.date+w.time)>=t).sort((x,y)=>(x.date+x.time).localeCompare(y.date+y.time)).slice(0,7);$("upcoming").innerHTML=a.map(w=>`<div class="client"><div class="row"><span><b>${date(w.date)} · ${esc(w.time)}</b><br>${esc(client(w.clientId)?.name||"")} · ${esc(w.type)}</span><span class="${w.paid?'ok':'bad'}">${w.paid?"Оплачено":"Не оплачено"}</span></div></div>`).join("")||'<div class="empty">Нет ближайших тренировок</div>'}
-function renderAll(){fillClients();renderClients();renderWorkouts();renderPayments();renderHome();renderProfile()}
+function diaryISO(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function setDiaryToday(){$("diaryDate").value=diaryISO(new Date());renderDiary()}
+function shiftDiary(n){let v=$("diaryDate").value||diaryISO(new Date()),d=new Date(v+"T12:00:00");d.setDate(d.getDate()+n);$("diaryDate").value=diaryISO(d);renderDiary()}
+function diaryEnd(time,duration){let a=String(time||"00:00").split(":").map(Number),m=a[0]*60+a[1]+Number(duration||60);return String(Math.floor(m/60)%24).padStart(2,"0")+":"+String(m%60).padStart(2,"0")}
+function diaryNew(){let day=$("diaryDate").value||diaryISO(new Date());clearWorkout();$("wd").value=day;screen("training")}
+function renderDiary(){if(!$("diaryDate"))return;if(!$("diaryDate").value)$("diaryDate").value=diaryISO(new Date());let day=$("diaryDate").value,a=ws.filter(w=>w.date===day).sort((x,y)=>String(x.time||"").localeCompare(String(y.time||"")));$("diarySummary").textContent=date(day)+" · "+a.length+" "+(a.length===1?"тренировка":a.length<5?"тренировки":"тренировок");$("diaryBody").innerHTML=a.length?a.map(w=>`<tr><td><b>${esc(String(w.time||"00:00").slice(0,5))}–${diaryEnd(w.time,w.duration)}</b></td><td>${esc(client(w.clientId)?.name||"Клиент удалён")}</td><td>${esc(w.type||"Тренировка")}</td><td>${w.done?"✓ Проведена":"Запланирована"}</td><td><button class="secondary" onclick="editW('${w.id}')">✏️ Открыть</button></td></tr>`).join(""):`<tr><td colspan="5" class="empty">На этот день записей нет. Нажмите «＋ Записать клиента».</td></tr>`}
+function renderAll(){fillClients();renderClients();renderWorkouts();renderPayments();renderHome();renderProfile();renderDiary()}
 fillCat();clearWorkout();
 let mode='login',recovering=false,authBusy=false;
 function authMessage(t,kind=''){let x=$('authMsg');x.textContent=t;x.className='auth-message '+kind}
